@@ -1,5 +1,6 @@
 import * as userServices from '../services/userServices.js';
 import { validationResult } from 'express-validator';
+import userModel from '../models/user.model.js';
 
 export const createUserController = async (req, res) => {
     const errors = validationResult(req);
@@ -15,4 +16,32 @@ export const createUserController = async (req, res) => {
     catch (error) {
         return res.status(500).json({ message: error.message });
     }
-};;
+};
+export const loginUserController = async (req, res) => {
+    const erros=validationResult(req);
+    if (!erros.isEmpty()) {
+        return res.status(400).json({ errors: erros.array() });
+    }
+    try{
+        const { email, password } = req.body;
+       const user =await userModel.findOne({ email }).select('+password');
+
+       if(!user || !user.isValidPassword(password)) {
+            return res.status(401).json({message: 'Invalid email or password' });
+        }
+        const isMatch= await user.isValidPassword(password);
+        if(!isMatch) {
+            return res.status(401).json({ message: 'Invalid email or password' });
+        }
+        const token = user.generateJWT(); // <-- Call on the user instance
+        return res.status(200).json({ user, token });
+    }
+    catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
+export const getUserController = async (req, res) => {
+    console.log(req.user);
+    res.status(200).json({ user: req.user });
+}
